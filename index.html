@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#17212b">
+<title>Channel Poster</title>
+<!-- install-as-app -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-512.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Poster">
+<style>
+  :root{
+    --bg:#0e1621; --panel:#17212b; --panel2:#1d2733; --line:#26313c;
+    --accent:#5288c1; --accent2:#3d6a9c; --text:#e7eef5; --muted:#7b8794;
+    --chip:#242f3d; --chip-on:#2b5278; --ok:#4fae4e; --err:#e05a5a;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0; height:100%}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:16px; line-height:1.4;
+  }
+  .wrap{max-width:680px; margin:0 auto; padding:14px 14px 40px}
+  h1{font-size:18px; margin:6px 2px 14px; font-weight:600; display:flex; align-items:center; gap:8px}
+  h1 .dot{width:9px;height:9px;border-radius:50%;background:var(--accent)}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px}
+  label{display:block; font-size:13px; color:var(--muted); margin:0 0 6px 2px}
+  textarea,input[type=text],input[type=password]{
+    width:100%; background:var(--panel2); border:1px solid var(--line); color:var(--text);
+    border-radius:10px; padding:11px 12px; font-size:16px; font-family:inherit; outline:none;
+  }
+  textarea{min-height:120px; resize:vertical}
+  textarea:focus,input:focus{border-color:var(--accent)}
+  .row{display:flex; gap:8px; align-items:center}
+  .btn{
+    border:none; border-radius:10px; padding:11px 16px; font-size:15px; font-weight:600;
+    cursor:pointer; background:var(--chip); color:var(--text); transition:.15s;
+  }
+  .btn:active{transform:scale(.97)}
+  .btn.primary{background:var(--accent); color:#fff}
+  .btn.primary:disabled{opacity:.5; cursor:default}
+  .btn.ghost{background:transparent; border:1px solid var(--line); color:var(--muted)}
+  .btn.sm{padding:7px 12px; font-size:14px}
+
+  /* hashtag palette */
+  .tags{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px}
+  .tag{
+    display:inline-flex; align-items:center; gap:6px; background:var(--chip);
+    border:1px solid var(--line); color:var(--text); border-radius:20px;
+    padding:7px 12px; font-size:14px; cursor:pointer; user-select:none;
+  }
+  .tag.on{background:var(--chip-on); border-color:var(--accent)}
+  .tag .x{color:var(--muted); font-size:16px; line-height:1; padding:0 1px}
+  .tag .x:hover{color:var(--err)}
+  .addtag{display:flex; gap:8px}
+  .addtag input{flex:1}
+  #selectedTags{margin-bottom:10px}
+  .sel-hint{font-size:13px; color:var(--muted)}
+  .palette-toggle{width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center}
+  #palette{margin-top:12px; border-top:1px solid var(--line); padding-top:12px}
+  #tagSearch{margin-bottom:10px}
+  #tags{max-height:42vh; overflow-y:auto}
+  /* AI suggestions */
+  .ai-row{display:flex; gap:8px; align-items:center; margin-top:10px}
+  .suggest{margin-top:10px}
+  .suggest .info{font-size:12px; color:var(--muted); margin-bottom:8px}
+  .suggest .info a{color:var(--accent); text-decoration:none}
+  .suggest .tag{background:rgba(82,136,193,.12); border-style:dashed; border-color:var(--accent2)}
+  .suggest .tag::before{content:"+ "; color:var(--accent)}
+
+  /* media */
+  input[type=file]{display:none}
+  .dropzone{border:1.5px dashed var(--line); border-radius:12px; padding:18px 14px; text-align:center; color:var(--muted); font-size:14px; cursor:pointer; transition:.15s}
+  .dropzone b{color:var(--accent)}
+  .dropzone.drag{border-color:var(--accent); background:rgba(82,136,193,.10); color:var(--text)}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(92px,1fr)); gap:8px; margin-top:10px}
+  .grid:empty{margin-top:0}
+  .thumb{position:relative; aspect-ratio:1/1; border-radius:10px; overflow:hidden; background:#000; border:1px solid var(--line); cursor:grab}
+  .thumb.dragging{opacity:.35}
+  .thumb img,.thumb video{width:100%; height:100%; object-fit:cover; display:block; pointer-events:none}
+  .thumb .num{position:absolute; top:4px; left:4px; background:rgba(0,0,0,.6); color:#fff; font-size:11px; border-radius:10px; padding:1px 7px}
+  .thumb .vid{position:absolute; bottom:4px; left:4px; background:rgba(0,0,0,.6); color:#fff; font-size:11px; border-radius:6px; padding:1px 5px}
+  .thumb .del{position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:50%; border:none; background:rgba(0,0,0,.65); color:#fff; font-size:14px; line-height:22px; text-align:center; cursor:pointer; padding:0}
+  .thumb .del:hover{background:var(--err)}
+
+  /* preview */
+  .pv{background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:12px; white-space:pre-wrap; word-break:break-word; font-size:15px}
+  .pv .sig a{color:var(--accent); text-decoration:none; font-style:italic}
+  .pv .hash{color:var(--accent)}
+  .counter{font-size:12px; color:var(--muted); text-align:right; margin-top:6px}
+  .counter.over{color:var(--err)}
+
+  details{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:0 14px; margin-bottom:14px}
+  details summary{cursor:pointer; padding:14px 0; font-weight:600; list-style:none}
+  details summary::-webkit-details-marker{display:none}
+  details summary::before{content:"⚙ "; color:var(--muted)}
+  details[open] summary{border-bottom:1px solid var(--line); margin-bottom:14px}
+  .field{margin-bottom:12px}
+  .status{margin-top:12px; padding:11px 12px; border-radius:10px; font-size:14px; display:none}
+  .status.ok{display:block; background:rgba(79,174,78,.15); color:#9be09a; border:1px solid var(--ok)}
+  .status.err{display:block; background:rgba(224,90,90,.15); color:#f0a3a3; border:1px solid var(--err)}
+  .hint{font-size:12px; color:var(--muted); margin:4px 2px 0}
+  .sticky{position:sticky; bottom:0; padding-top:8px; background:linear-gradient(transparent,var(--bg) 22%)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><span class="dot"></span> Channel Poster</h1>
+
+  <!-- POST TEXT -->
+  <div class="card">
+    <label>Текст поста</label>
+    <textarea id="text" placeholder="Напиши пост..."></textarea>
+  </div>
+
+  <!-- MEDIA -->
+  <div class="card">
+    <label>Медиа — фото и видео (до 10, можно вперемешку)</label>
+    <div class="dropzone" id="drop">
+      Перетащи файлы сюда, вставь из буфера <b>Ctrl+V</b> или <b>выбери вручную</b>
+    </div>
+    <input type="file" id="photo" accept="image/*,video/*" multiple>
+    <div class="grid" id="grid"></div>
+    <!-- ИИ-поиск временно отключён (кнопка скрыта). Чтобы вернуть — раскомментируй блок ниже.
+    <div class="ai-row">
+      <button class="btn sm" id="identifyBtn" type="button">🔍 Определить персонажа (ИИ)</button>
+    </div>
+    <div class="suggest" id="suggest"></div>
+    -->
+  </div>
+
+  <!-- HASHTAGS -->
+  <div class="card">
+    <label>Хештеги — выбери, что добавить в низ поста</label>
+
+    <!-- выбранные теги: всегда видны, тап убирает -->
+    <div class="tags" id="selectedTags"></div>
+
+    <!-- кнопка раскрытия списка -->
+    <button class="btn sm palette-toggle" id="togglePalette" type="button">▸ Список хештегов</button>
+
+    <!-- сворачиваемый список -->
+    <div id="palette" style="display:none">
+      <input type="text" id="tagSearch" placeholder="🔍 поиск по тегам...">
+      <div class="tags" id="tags"></div>
+      <div class="addtag">
+        <input type="text" id="newTag" placeholder="новые теги через пробел: Topaz SilverWolf Lingsha">
+        <button class="btn sm" id="addTag" type="button">+ Добавить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="card">
+    <label>Предпросмотр</label>
+    <div class="pv" id="preview"></div>
+    <div class="counter" id="counter"></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <details id="settings">
+    <summary>Настройки</summary>
+    <div class="field">
+      <label>Токен бота</label>
+      <input type="password" id="token" placeholder="123456:ABC...">
+      <div class="hint">Бот должен быть админом канала. Хранится только на этом устройстве.</div>
+    </div>
+    <div class="field">
+      <label>ID / @username канала</label>
+      <input type="text" id="chat" placeholder="@sanctuary_of_mind">
+    </div>
+    <div class="field">
+      <label>Подпись (текст ссылки внизу)</label>
+      <input type="text" id="sigText" placeholder="𝒮𝒶𝓃𝒸𝓉𝓊𝒶𝓇𝓎 𝑜𝒻 𝑀𝒾𝓃𝒹">
+    </div>
+    <div class="field">
+      <label>Ссылка подписи</label>
+      <input type="text" id="sigUrl" placeholder="https://t.me/sanctuary_of_mind">
+    </div>
+    <div class="field">
+      <label>ИИ-эндпоинт SauceNAO (точный поиск)</label>
+      <input type="text" id="aiEndpoint" placeholder="/.netlify/functions/sauce">
+      <div class="hint">По умолчанию работает на Netlify. Менять не нужно.</div>
+    </div>
+    <div class="field">
+      <label>ИИ-эндпоинт Gemini (запасной, визуальный)</label>
+      <input type="text" id="geminiEndpoint" placeholder="/.netlify/functions/gemini">
+      <div class="hint">Используется, если SauceNAO не нашёл тегов. Нужен ключ GEMINI_KEY в Netlify.</div>
+    </div>
+    <button class="btn sm" id="saveSettings">Сохранить настройки</button>
+  </details>
+
+  <div class="sticky">
+    <button class="btn primary" id="send" style="width:100%">📤 Опубликовать в канал</button>
+    <div class="status" id="status"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const LS = {
+  get:(k,d)=>{ try{const v=localStorage.getItem(k); return v===null?d:JSON.parse(v);}catch(e){return d;} },
+  set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))
+};
+
+// ---- defaults (token intentionally empty — paste your NEW token in settings) ----
+const DEFAULTS = {
+  token: "",
+  chat: "@sanctuary_of_mind",
+  sigText: "𝒮𝒶𝓃𝒸𝓉𝓊𝒶𝓇𝓎 𝑜𝒻 𝑀𝒾𝓃𝒹",
+  sigUrl: "https://t.me/sanctuary_of_mind",
+  aiEndpoint: "/.netlify/functions/sauce",
+  geminiEndpoint: "/.netlify/functions/gemini",
+  tags: ["Cipher","HonkaiStarRail","Neko"]
+};
+
+let tags = LS.get("cp_tags", DEFAULTS.tags.slice());
+let selected = [];           // currently chosen hashtags, in click order
+let media = [];       // [{file, url, type:'photo'|'video', id}]
+let mediaSeq = 0;
+const MAX_MEDIA = 10;
+
+// ---- settings load ----
+function loadSettings(){
+  $("#token").value   = LS.get("cp_token", DEFAULTS.token);
+  $("#chat").value    = LS.get("cp_chat", DEFAULTS.chat);
+  $("#sigText").value = LS.get("cp_sigText", DEFAULTS.sigText);
+  $("#sigUrl").value  = LS.get("cp_sigUrl", DEFAULTS.sigUrl);
+  $("#aiEndpoint").value = LS.get("cp_aiEndpoint", DEFAULTS.aiEndpoint);
+  $("#geminiEndpoint").value = LS.get("cp_geminiEndpoint", DEFAULTS.geminiEndpoint);
+}
+$("#saveSettings").onclick = () => {
+  LS.set("cp_token", $("#token").value.trim());
+  LS.set("cp_chat", $("#chat").value.trim());
+  LS.set("cp_sigText", $("#sigText").value);
+  LS.set("cp_sigUrl", $("#sigUrl").value.trim());
+  LS.set("cp_aiEndpoint", ($("#aiEndpoint").value.trim() || DEFAULTS.aiEndpoint));
+  LS.set("cp_geminiEndpoint", ($("#geminiEndpoint").value.trim() || DEFAULTS.geminiEndpoint));
+  flash("Настройки сохранены ✓", false);
+  $("#settings").open = false;
+  render();
+};
+
+// ---- hashtag palette ----
+let paletteOpen = false;
+function sortTags(){ tags.sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase(),"ru")); }
+function updateToggle(){
+  $("#togglePalette").textContent = `${paletteOpen?"▾":"▸"} Список хештегов (${tags.length})`;
+}
+
+// выбранные теги — всегда видны, тап убирает из поста
+function renderSelected(){
+  const box = $("#selectedTags"); box.innerHTML = "";
+  if(!selected.length){
+    box.innerHTML = '<span class="sel-hint">Теги не выбраны — открой список ниже</span>';
+    return;
+  }
+  selected.forEach(t=>{
+    const el = document.createElement("span");
+    el.className = "tag on"; el.textContent = "#"+t; el.title = "убрать из поста";
+    el.onclick = ()=>{ selected = selected.filter(x=>x!==t); renderSelected(); renderTags(); render(); };
+    box.appendChild(el);
+  });
+}
+
+// полный список с фильтром по поиску
+function renderTags(){
+  const box = $("#tags"); box.innerHTML = "";
+  const q = ($("#tagSearch") ? $("#tagSearch").value : "").trim().toLowerCase();
+  const list = tags.filter(t => !q || t.toLowerCase().includes(q));
+  if(!list.length){
+    box.innerHTML = `<span class="sel-hint">${tags.length ? "Ничего не найдено" : "Список пуст — добавь теги ниже"}</span>`;
+  }
+  list.forEach(t=>{
+    const el = document.createElement("span");
+    el.className = "tag" + (selected.includes(t) ? " on" : "");
+    el.innerHTML = `#${escapeHtml(t)} <span class="x" title="удалить из списка">×</span>`;
+    el.onclick = e=>{
+      if(e.target.classList.contains("x")){ e.stopPropagation(); deleteTag(t); return; }
+      const idx = selected.indexOf(t);
+      if(idx>=0) selected.splice(idx,1); else selected.push(t);
+      renderSelected(); renderTags(); render();
+    };
+    box.appendChild(el);
+  });
+  updateToggle();
+}
+
+function deleteTag(t){
+  if(!confirm(`Удалить хештег #${t} из списка?`)) return;
+  tags = tags.filter(x=>x!==t);
+  selected = selected.filter(x=>x!==t);
+  LS.set("cp_tags", tags);
+  renderSelected(); renderTags(); render();
+}
+
+// добавление нескольких тегов сразу — разделитель пробел/запятая
+function addTag(){
+  const parts = $("#newTag").value.split(/[\s,]+/).map(s=>s.replace(/^#+/,"").trim()).filter(Boolean);
+  let added = 0;
+  parts.forEach(p=>{ if(!tags.includes(p)){ tags.push(p); added++; } });
+  if(added){ sortTags(); LS.set("cp_tags", tags); }
+  $("#newTag").value = "";
+  renderTags();
+  flash(added ? `Добавлено тегов: ${added}` : "Новых тегов нет (уже в списке или пусто)", !added);
+}
+
+$("#togglePalette").onclick = ()=>{
+  paletteOpen = !paletteOpen;
+  $("#palette").style.display = paletteOpen ? "block" : "none";
+  updateToggle();
+  if(paletteOpen) $("#tagSearch").focus();
+};
+$("#tagSearch").addEventListener("input", renderTags);
+$("#addTag").onclick = addTag;
+$("#newTag").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addTag(); }});
+
+// ---- media: pick / drag&drop / paste / reorder ----
+const drop = $("#drop");
+drop.onclick = ()=>$("#photo").click();
+$("#photo").onchange = e=>{ addFiles(e.target.files); $("#photo").value=""; };
+
+["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault(); drop.classList.add("drag");}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault(); drop.classList.remove("drag");}));
+drop.addEventListener("drop", e=>{ if(e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
+
+// Ctrl+V — вставка картинки/видео из буфера обмена
+window.addEventListener("paste", e=>{
+  const files = e.clipboardData && e.clipboardData.files;
+  if(files && files.length){ addFiles(files); }
+});
+
+function addFiles(fileList){
+  const files = Array.from(fileList).filter(f=>/^(image|video)\//.test(f.type));
+  if(!files.length) return;
+  let skipped = false;
+  for(const f of files){
+    if(media.length>=MAX_MEDIA){ skipped = true; break; }
+    media.push({file:f, url:URL.createObjectURL(f), type:f.type.startsWith("video")?"video":"photo", id:++mediaSeq});
+  }
+  if(skipped) flash(`Максимум ${MAX_MEDIA} медиа в одном посте — лишнее не добавлено.`, true);
+  renderMedia(); render();
+}
+
+function removeMedia(id){
+  const m = media.find(x=>x.id===id);
+  if(m) URL.revokeObjectURL(m.url);
+  media = media.filter(x=>x.id!==id);
+  renderMedia(); render();
+}
+
+function renderMedia(){
+  const g = $("#grid"); g.innerHTML="";
+  media.forEach((m,i)=>{
+    const d = document.createElement("div");
+    d.className="thumb"; d.draggable=true;
+    const inner = m.type==="video"
+      ? `<video src="${m.url}" muted preload="metadata"></video><span class="vid">▶ видео</span>`
+      : `<img src="${m.url}">`;
+    d.innerHTML = `${inner}<span class="num">${i+1}</span><button class="del" title="убрать">×</button>`;
+    d.querySelector(".del").onclick = e=>{ e.stopPropagation(); removeMedia(m.id); };
+    // перетаскивание для смены порядка
+    d.addEventListener("dragstart", e=>{ d.classList.add("dragging"); e.dataTransfer.setData("text/plain", i); });
+    d.addEventListener("dragend", ()=>d.classList.remove("dragging"));
+    d.addEventListener("dragover", e=>e.preventDefault());
+    d.addEventListener("drop", e=>{
+      e.preventDefault(); e.stopPropagation();
+      const from = +e.dataTransfer.getData("text/plain");
+      if(isNaN(from) || from===i) return;
+      const [mv] = media.splice(from,1); media.splice(i,0,mv);
+      renderMedia(); render();
+    });
+    g.appendChild(d);
+  });
+}
+
+// ---- AI: распознавание персонажа по фото (SauceNAO через Netlify-функцию) ----
+function fileToResizedBase64(file, maxDim){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{
+      let w = img.naturalWidth, h = img.naturalHeight;
+      const scale = Math.min(1, maxDim/Math.max(w,h));
+      w = Math.round(w*scale); h = Math.round(h*scale);
+      const c = document.createElement("canvas"); c.width=w; c.height=h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve({ base64: c.toDataURL("image/jpeg", 0.85).split(",")[1], mime:"image/jpeg" });
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); reject(new Error("не удалось прочитать изображение")); };
+    img.src = url;
+  });
+}
+
+function addSuggested(t){
+  if(!t) return;
+  if(!tags.includes(t)){ tags.push(t); sortTags(); LS.set("cp_tags", tags); }
+  if(!selected.includes(t)) selected.push(t);
+  renderSelected(); renderTags(); render();
+}
+
+// показываем подсказки, сгруппированные по каждому фото
+function renderSuggestGroups(groups){
+  const box = $("#suggest"); box.innerHTML = "";
+  const single = groups.length === 1;
+  let anything = false;
+  groups.forEach(g=>{
+    const prefix = single ? "" : `Фото ${g.photoNum}: `;
+    const info = document.createElement("div");
+    info.className = "info";
+
+    if(g.error){ info.textContent = `${prefix}ошибка — ${g.error}`; box.appendChild(info); return; }
+
+    // нет тегов персонажа → показываем найденные источники (если есть)
+    if(!g.tags.length){
+      if(g.sources && g.sources.length){
+        anything = true;
+        info.innerHTML = `${prefix}точных тегов нет, но похоже на: ` + g.sources.map(s=>
+          `<a href="${escapeHtml(s.url)}" target="_blank">${escapeHtml(s.site||"источник")} ${Math.round(s.similarity)}%</a>`
+        ).join(" · ");
+      } else {
+        info.textContent = `${prefix}совпадений нет`;
+      }
+      box.appendChild(info);
+      return;
+    }
+
+    anything = true;
+    const confRu = {high:"высокая", medium:"средняя", low:"низкая"};
+    let txt = `${prefix}<b>${escapeHtml(g.label || "совпадение")}</b>`;
+    if(typeof g.similarity === "number") txt += ` · ${Math.round(g.similarity)}%`;
+    if(g.confidence) txt += ` · уверенность: ${confRu[g.confidence] || escapeHtml(g.confidence)}`;
+    if(g.engine) txt += ` · <i>${escapeHtml(g.engine)}</i>`;
+    if(g.source) txt += ` · <a href="${escapeHtml(g.source)}" target="_blank">источник</a>`;
+    info.innerHTML = txt;
+    box.appendChild(info);
+    g.tags.forEach(t=>{
+      const el = document.createElement("span");
+      el.className = "tag"; el.textContent = "#"+t; el.title = "добавить в список и пост";
+      el.onclick = ()=>{ addSuggested(t); el.remove(); };
+      box.appendChild(el);
+    });
+  });
+  if(!anything && !groups.some(g=>g.error))
+    box.innerHTML = '<span class="sel-hint">ИИ не нашёл совпадений.</span>';
+}
+
+async function callEngine(endpoint, base64, mime){
+  const res = await fetch(endpoint, {
+    method:"POST", headers:{"content-type":"application/json"},
+    body: JSON.stringify({ imageBase64: base64, mime })
+  });
+  return res.json();
+}
+
+const _identifyBtn = $("#identifyBtn");
+if(_identifyBtn) _identifyBtn.onclick = async ()=>{
+  const photos = media.filter(m=>m.type==="photo");
+  if(!photos.length){ flash("Сначала добавь фото — видео ИИ не распознаёт.", true); return; }
+  const sauceEp  = LS.get("cp_aiEndpoint", DEFAULTS.aiEndpoint);
+  const geminiEp = LS.get("cp_geminiEndpoint", DEFAULTS.geminiEndpoint);
+  const b = $("#identifyBtn"); b.disabled=true;
+  $("#suggest").innerHTML = "";
+  const groups = []; let minRemaining = null; let hadFatal = false;
+  try{
+    for(let i=0;i<photos.length;i++){
+      const photo = photos[i];
+      const photoNum = media.indexOf(photo)+1;
+      b.textContent = photos.length>1 ? `🔎 Определяю ${i+1}/${photos.length}…` : "🔎 Определяю…";
+      const {base64, mime} = await fileToResizedBase64(photo.file, 1024);
+
+      // 1) SauceNAO — точный поиск
+      let s = null;
+      try { s = await callEngine(sauceEp, base64, mime); }
+      catch(err){ s = { ok:false, error: err.message }; }
+      if(s && s.ok && typeof s.remaining === "number")
+        minRemaining = (minRemaining===null) ? s.remaining : Math.min(minRemaining, s.remaining);
+
+      if(s && s.ok && s.tags && s.tags.length){
+        groups.push({ photoNum, engine:"SauceNAO",
+          label: s.best && s.best.label, similarity: s.best && s.best.similarity,
+          source: s.best && s.best.source, tags: s.tags, sources: s.sources || [] });
+        continue;
+      }
+
+      // 2) Gemini — визуальное распознавание (запасной)
+      let g = null;
+      try { g = await callEngine(geminiEp, base64, mime); }
+      catch(err){ g = { ok:false, error: err.message }; }
+
+      if(g && g.ok && g.tags && g.tags.length){
+        groups.push({ photoNum, engine:"Gemini",
+          label: g.best && g.best.label, confidence: g.best && g.best.confidence,
+          tags: g.tags, sources: (s && s.sources) || [] });
+      } else {
+        const err = (s && !s.ok && s.error) || (g && !g.ok && g.error) || null;
+        if(err) hadFatal = true;
+        groups.push({ photoNum, tags: [], sources: (s && s.sources) || [], error: err });
+      }
+    }
+    renderSuggestGroups(groups);
+    if(typeof minRemaining === "number" && minRemaining <= 10)
+      flash(`Осталось запросов SauceNAO сегодня: ${minRemaining}`, false);
+  }finally{
+    b.disabled=false; b.textContent="🔍 Определить персонажа (ИИ)";
+  }
+};
+
+// ---- build post ----
+function escapeHtml(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+// Returns {html, plain} of the final caption
+function buildPost(){
+  const text = $("#text").value.replace(/\s+$/,"");
+  const sigText = $("#sigText").value || DEFAULTS.sigText;
+  const sigUrl  = ($("#sigUrl").value || DEFAULTS.sigUrl).trim();
+  const hashLine = selected.map(t=>"#"+t).join(" ");
+
+  let html = escapeHtml(text);
+  let plain = text;
+  if(hashLine){ html += (html?"\n\n":"") + escapeHtml(hashLine); plain += (plain?"\n\n":"")+hashLine; }
+  const sigHtml = `<a href="${escapeHtml(sigUrl)}">${escapeHtml(sigText)}</a>`;
+  html  += (html?"\n\n":"") + sigHtml;
+  plain += (plain?"\n\n":"") + sigText;
+  return {html, plain};
+}
+
+function render(){
+  const {html, plain} = buildPost();
+  // preview: render link visually
+  $("#preview").innerHTML = html
+      .replace(/(#[^\s#]+)/g, '<span class="hash">$1</span>')
+      .replace(/<a href="([^"]+)">([^<]+)<\/a>/, '<span class="sig"><a href="$1" target="_blank">$2</a></span>');
+  // caption limit 1024 (с медиа) / 4096 (только текст)
+  const hasMedia = media.length>0;
+  const limit = hasMedia ? 1024 : 4096;
+  const len = plain.length;
+  const c = $("#counter");
+  const mc = hasMedia ? ` · ${media.length} медиа` : "";
+  c.textContent = `${len} / ${limit}${mc}` + (hasMedia ? " (подпись к медиа)" : " (текст)");
+  c.className = "counter" + (len>limit ? " over" : "");
+}
+["#text","#sigText","#sigUrl"].forEach(s=>$(s).addEventListener("input",render));
+
+function flash(msg, isErr){
+  const s = $("#status");
+  s.textContent = msg;
+  s.className = "status " + (isErr?"err":"ok");
+}
+
+// ---- send ----
+async function tgCall(base, method, form){
+  const res = await fetch(base+method, {method:"POST", body:form});
+  const data = await res.json();
+  if(!data.ok) throw new Error(data.description || "неизвестная ошибка");
+  return data;
+}
+
+$("#send").onclick = async ()=>{
+  const token = LS.get("cp_token", "").trim();
+  const chat  = LS.get("cp_chat", "").trim();
+  if(!token){ flash("Укажи токен бота в настройках.", true); $("#settings").open=true; return; }
+  if(!chat){ flash("Укажи ID/@username канала в настройках.", true); $("#settings").open=true; return; }
+
+  const {html, plain} = buildPost();
+  if(!plain.trim() && media.length===0){ flash("Пост пустой.", true); return; }
+  const limit = media.length ? 1024 : 4096;
+  if(plain.length>limit){ flash(`Слишком длинно: ${plain.length}/${limit}.${media.length?" С медиа лимит подписи 1024.":""}`, true); return; }
+
+  const base = `https://api.telegram.org/bot${token}/`;
+  const btn = $("#send"); btn.disabled=true; btn.textContent="Отправляю…";
+  try{
+    if(media.length===0){
+      const f = new FormData();
+      f.append("chat_id", chat); f.append("text", html); f.append("parse_mode","HTML");
+      await tgCall(base, "sendMessage", f);
+    } else if(media.length===1){
+      const m = media[0], f = new FormData();
+      f.append("chat_id", chat);
+      f.append(m.type, m.file);
+      f.append("caption", html); f.append("parse_mode","HTML");
+      await tgCall(base, m.type==="video"?"sendVideo":"sendPhoto", f);
+    } else {
+      // 2..10 → альбом, подпись на первом элементе
+      const f = new FormData();
+      f.append("chat_id", chat);
+      const arr = media.map((m,idx)=>{
+        f.append(`m${idx}`, m.file);
+        const item = {type:m.type, media:`attach://m${idx}`};
+        if(idx===0){ item.caption = html; item.parse_mode = "HTML"; }
+        return item;
+      });
+      f.append("media", JSON.stringify(arr));
+      await tgCall(base, "sendMediaGroup", f);
+    }
+    flash(`Опубликовано ✓${media.length>1?` (${media.length} медиа)`:""}`, false);
+    // сброс поста, палитра и настройки сохраняются
+    $("#text").value=""; selected=[];
+    media.forEach(m=>URL.revokeObjectURL(m.url)); media=[];
+    renderMedia(); renderSelected(); renderTags(); render();
+  } catch(err){
+    flash("Ошибка: " + err.message, true);
+  } finally {
+    btn.disabled=false; btn.textContent="📤 Опубликовать в канал";
+  }
+};
+
+// ---- init ----
+loadSettings();
+sortTags();
+renderSelected();
+renderTags();
+renderMedia();
+render();
+</script>
+</body>
+</html>

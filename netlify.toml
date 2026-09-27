@@ -1,0 +1,9 @@
+# Netlify configuration
+# Static site + serverless function for SauceNAO image search.
+
+[build]
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
